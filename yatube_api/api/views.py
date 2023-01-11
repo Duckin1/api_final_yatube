@@ -1,16 +1,19 @@
 from django.shortcuts import get_object_or_404
-from rest_framework import permissions, viewsets, filters
-from rest_framework.permissions import IsAuthenticated
+from rest_framework import filters, mixins, permissions, viewsets
+from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
+
 from .permissions import IsAuthorOrReadOnly
-from .serializers import CommentSerializer, GroupSerializer, PostSerializer, FollowSerializer
-from posts.models import Group, Post, Follow
-from rest_framework import mixins
+from .serializers import (CommentSerializer, FollowSerializer, GroupSerializer,
+                          PostSerializer)
+from posts.models import Group, Post
 
 
 class PostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.all()
     serializer_class = PostSerializer
-    permission_classes = (permissions.IsAuthenticated,
+    pagination_class = LimitOffsetPagination
+    permission_classes = (IsAuthenticatedOrReadOnly,
                           IsAuthorOrReadOnly)
 
     def perform_create(self, serializer):
@@ -20,11 +23,12 @@ class PostViewSet(viewsets.ModelViewSet):
 class GroupViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
+    permission_classes = (IsAuthenticatedOrReadOnly,)
 
 
 class CommentViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer
-    permission_classes = (permissions.IsAuthenticated,
+    permission_classes = (IsAuthenticatedOrReadOnly,
                           IsAuthorOrReadOnly)
 
     def get_queryset(self):
@@ -37,21 +41,19 @@ class CommentViewSet(viewsets.ModelViewSet):
         post = get_object_or_404(Post, pk=post_id)
         serializer.save(author=self.request.user, post=post)
 
+
 class FollowViewSet(
     mixins.ListModelMixin,
     mixins.CreateModelMixin,
     viewsets.GenericViewSet
-    ):
-    queryset = Follow.objects.all()
+):
     serializer_class = FollowSerializer
-    http_method_names = ["get", "post"]
-    permission_classes = [IsAuthenticated]
-    filter_backends = [filters.SearchFilter]
+    permission_classes = (permissions.IsAuthenticated,)
+    filter_backends = (filters.SearchFilter,)
     search_fields = ("user__username", "following__username")
+
+    def get_queryset(self):
+        return self.request.user.following.all()
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
-
-    def get_queryset(self):
-        return Follow.objects.filter(following=self.request.user)
-    

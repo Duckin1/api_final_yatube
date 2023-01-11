@@ -1,9 +1,10 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from posts.models import Comment, Group, Post, Follow
+from posts.models import Comment, Follow, Group, Post
 
 User = get_user_model()
+
 
 class FollowSerializer(serializers.ModelSerializer):
     user = serializers.SlugRelatedField(
@@ -15,19 +16,19 @@ class FollowSerializer(serializers.ModelSerializer):
         slug_field="username", queryset=User.objects.all()
     )
 
-    def validate_following(self, value):
-        if value == self.context["request"].user:
+    def validate(self, data):
+        if data['following'] == self.context["request"].user:
             raise serializers.ValidationError()
-        return value
+        return data
 
     class Meta:
         fields = "__all__"
         model = Follow
 
+
 class PostSerializer(serializers.ModelSerializer):
     author = serializers.SlugRelatedField(read_only=True,
                                           slug_field='username')
-    group = serializers.SlugRelatedField(read_only=True, slug_field='title')
 
     class Meta:
         model = Post
