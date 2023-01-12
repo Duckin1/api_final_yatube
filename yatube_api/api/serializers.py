@@ -8,21 +8,21 @@ User = get_user_model()
 
 class FollowSerializer(serializers.ModelSerializer):
     user = serializers.SlugRelatedField(
-        slug_field="username",
+        slug_field='username',
         read_only=True,
         default=serializers.CurrentUserDefault(),
     )
     following = serializers.SlugRelatedField(
-        slug_field="username", queryset=User.objects.all()
+        slug_field='username', queryset=User.objects.all()
     )
 
     def validate(self, data):
-        if data['following'] == self.context["request"].user:
+        if data['following'] == self.context['request'].user:
             raise serializers.ValidationError()
         return data
 
     class Meta:
-        fields = "__all__"
+        fields = '__all__'
         model = Follow
 
 
